@@ -26,5 +26,3 @@ require (
 )
 
 replace go1f => ./
-
-require go1f v0.0.0
