@@ -6,9 +6,9 @@ import (
 )
 
 func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
-	nowStr := r.URL.Query().Get("now")
-	date := r.URL.Query().Get("date")
-	repeat := r.URL.Query().Get("repeat")
+	nowStr := r.FormValue("now")
+	date := r.FormValue("date")
+	repeat := r.FormValue("repeat")
 
 	if date == "" {
 		http.Error(w, "no date passed in parameters", http.StatusBadRequest)
