@@ -11,6 +11,6 @@ func (app *application) routes() http.Handler {
 
 	router.Handle("/*", http.FileServer(http.Dir("web")))
 	router.Get("/api/nextdate", app.getNextDate)
-
+	router.Post("/api/task", app.addTaskHandler)
 	return router
 }

@@ -21,7 +21,7 @@ func adjustedNegativeMonthDays(monthDays []int, date time.Time) []int {
 	res := make([]int, 0, 31)
 	for _, day := range monthDays {
 		if day < 0 {
-			days := time.Date(date.Year(), date.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
+			days := time.Date(date.Year(), date.Month()+1, 0, 0, 0, 0, 0, time.Local).Day()
 			res = append(res, days+day)
 		} else {
 			res = append(res, day)
@@ -53,9 +53,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if repeat == "" {
-		return "", fmt.Errorf("repeat arg is empty")
-	}
+
 	repeatLetters := strings.Split(repeat, " ")
 	if len(repeatLetters) < 2 && repeatLetters[0] != "y" {
 		return "", fmt.Errorf("repeat format is incorrect")
@@ -137,7 +135,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 
 		for {
 			if !slices.Contains(months, int(startTime.Month())) {
-				days := time.Date(startTime.Year(), startTime.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
+				days := time.Date(startTime.Year(), startTime.Month()+1, 0, 0, 0, 0, 0, time.Local).Day()
 				startTime = startTime.AddDate(0, 0, days-startTime.Day()+1)
 			} else {
 				startTime = startTime.AddDate(0, 0, 1)
