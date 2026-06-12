@@ -10,6 +10,7 @@ func (app *application) routes() http.Handler {
 	router := chi.NewRouter()
 
 	router.Handle("/*", http.FileServer(http.Dir("web")))
+	router.Get("/api/nextdate", app.getNextDate)
 
 	return router
 }
