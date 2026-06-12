@@ -30,12 +30,26 @@ func adjustedNegativeMonthDays(monthDays []int, date time.Time) []int {
 	return res
 }
 
-func NextDate(now time.Time, dstart string, repeat string) (string, error) {
-	startTime, err := time.Parse(dateFormat, dstart)
+func processDate(now, startTime time.Time, key string, val int) (string, error) {
 	dateToAdd := map[string]int{
 		"year": 0,
 		"days": 0,
 	}
+	dateToAdd[key] = val
+	if now.Before(startTime) {
+		startTime = startTime.AddDate(dateToAdd["year"], 0, dateToAdd["days"])
+	}
+
+	for now.After(startTime) {
+		startTime = startTime.AddDate(dateToAdd["year"], 0, dateToAdd["days"])
+	}
+
+	return startTime.Format(dateFormat), nil
+}
+
+func NextDate(now time.Time, dstart string, repeat string) (string, error) {
+	startTime, err := time.Parse(dateFormat, dstart)
+
 	if err != nil {
 		return "", err
 	}
@@ -55,22 +69,13 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		if daysToAdd > maxDayAmount {
 			return "", fmt.Errorf("you can only add up to %d amount of days, %d is too much")
 		}
-		dateToAdd["days"] = daysToAdd
+		return processDate(now, startTime, "days", daysToAdd)
 	case "y":
 		if len(repeatLetters) != 1 {
 			return "", fmt.Errorf("too many arguments")
 		}
-		dateToAdd["year"] = 1
+		return processDate(now, startTime, "year", 1)
 
-	/*
-		TODO:
-		There are some similarities between d,y and w,m. Maybe you should
-		Find some common points and extract those into functions, to make
-		code cleaner and better overall
-
-		AND
-		There are still bunch of error cases unhandled
-	*/
 	case "w":
 		weekDaysString := strings.Split(repeatLetters[1], ",")
 		weekDays := make([]int, 0, weekDaysAmount)
@@ -130,7 +135,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			months = []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 		}
 
-		for cnt := 1; ; cnt++ {
+		for {
 			if !slices.Contains(months, int(startTime.Month())) {
 				days := time.Date(startTime.Year(), startTime.Month()+1, 0, 0, 0, 0, 0, time.UTC).Day()
 				startTime = startTime.AddDate(0, 0, days-startTime.Day()+1)
@@ -141,17 +146,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				return startTime.Format(dateFormat), nil
 			}
 		}
-	default:
-		return "", fmt.Errorf("got %s, expected one of [ d w m y ]", repeatLetters[0])
 	}
+	return "", fmt.Errorf("got %s, expected one of [ d w m y ]", repeatLetters[0])
 
-	if now.Before(startTime) {
-		startTime = startTime.AddDate(dateToAdd["year"], 0, dateToAdd["days"])
-	}
-
-	for now.After(startTime) {
-		startTime = startTime.AddDate(dateToAdd["year"], 0, dateToAdd["days"])
-	}
-
-	return startTime.Format(dateFormat), nil
 }
