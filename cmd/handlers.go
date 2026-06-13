@@ -116,26 +116,37 @@ func (app *application) taskHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) changeTaskHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.URL.Query().Get("id")
+	var task models.Task
 
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	task := &models.Task{}
 	err = json.Unmarshal(data, &task)
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	task.ID = id
-	err = app.schedule.Put(r.Context(), task)
+
+	if task.Title == "" {
+		app.jsonError(w, "Не указан заголовок задачи", http.StatusBadRequest)
+		return
+	}
+
+	err = checkDate(&task)
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	app.writeJson(w, "{}", http.StatusOK)
+
+	err = app.schedule.Put(r.Context(), &task)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	app.writeJson(w, map[string]string{}, http.StatusOK)
 }
 
 type TasksResp struct {
