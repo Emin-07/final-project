@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -40,7 +41,8 @@ func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	app.writeJson(w, res, http.StatusOK)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(res))
 }
 
 func checkDate(task *models.Task) error {
@@ -101,13 +103,21 @@ func (app *application) addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	app.writeJson(w, map[string]int64{"id": id}, http.StatusCreated)
 }
-func (app *application) taskHandler(w http.ResponseWriter, r *http.Request) {
+
+func (app *application) getTask(r *http.Request) (*models.Task, error) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		app.jsonError(w, "Не указан идентификатор", http.StatusBadRequest)
-		return
+		return nil, fmt.Errorf("Не указан идентификатор")
 	}
 	task, err := app.schedule.Get(r.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
+}
+
+func (app *application) taskHandler(w http.ResponseWriter, r *http.Request) {
+	task, err := app.getTask(r)
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -140,7 +150,7 @@ func (app *application) changeTaskHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = app.schedule.Put(r.Context(), &task)
+	err = app.schedule.Update(r.Context(), &task)
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -164,4 +174,47 @@ func (app *application) tasksHandler(w http.ResponseWriter, r *http.Request) {
 		Tasks: tasks,
 	}, http.StatusOK)
 
+}
+
+func (app *application) completeTaskHandler(w http.ResponseWriter, r *http.Request) {
+	task, err := app.getTask(r)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if task.Repeat == "" {
+		err = app.schedule.Delete(r.Context(), task.ID)
+		if err != nil {
+			app.jsonError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	} else {
+		now := time.Now()
+		nextDate, err := NextDate(now, task.Date, task.Repeat)
+		if err != nil {
+			app.jsonError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		err = app.schedule.UpdateDate(r.Context(), nextDate, task.ID)
+		if err != nil {
+			app.jsonError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	app.writeJson(w, map[string]string{}, http.StatusOK)
+}
+
+func (app *application) deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		app.jsonError(w, "Не указан идентификатор", http.StatusBadRequest)
+		return
+	}
+	err := app.schedule.Delete(r.Context(), id)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	app.writeJson(w, map[string]string{}, http.StatusOK)
 }

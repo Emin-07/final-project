@@ -9,8 +9,9 @@ import (
 	"time"
 )
 
-const selectAllFromScheduler = `SELECT id, date, title, comment, repeat FROM scheduler `
-const whereId = ` WHERE id = :id`
+const selectAllFromScheduler = "SELECT id, date, title, comment, repeat FROM scheduler "
+const whereId = " WHERE id = :id "
+const limitQuery = " LIMIT :limit "
 
 //go:embed create_schedule_table.sql
 var createTableSQL string
@@ -55,15 +56,15 @@ func (s *SchedulerModel) Tasks(ctx context.Context, limit int, search string) ([
 	var err error
 	var rows *sql.Rows
 	if search == "" {
-		query := selectAllFromScheduler + `ORDER BY date LIMIT :limit`
+		query := selectAllFromScheduler + `ORDER BY date` + limitQuery
 		rows, err = s.DB.QueryContext(ctx, query, sql.Named("limit", limit))
 	} else {
 		if timeSearch, err := time.Parse("02.01.2006", search); err == nil {
 			date := timeSearch.Format("20060102")
-			query := selectAllFromScheduler + `WHERE date = :date LIMIT :limit`
+			query := selectAllFromScheduler + `WHERE date = :date` + limitQuery
 			rows, err = s.DB.QueryContext(ctx, query, sql.Named("date", date), sql.Named("limit", limit))
 		} else {
-			query := selectAllFromScheduler + `WHERE title LIKE :search OR comment LIKE :search ORDER BY date LIMIT :limit`
+			query := selectAllFromScheduler + `WHERE title LIKE :search OR comment LIKE :search ORDER BY date` + limitQuery
 			rows, err = s.DB.QueryContext(ctx, query, sql.Named("search", fmt.Sprintf("%%%s%%", search)), sql.Named("limit", limit))
 		}
 	}
@@ -106,7 +107,7 @@ func (s *SchedulerModel) Get(ctx context.Context, id string) (*Task, error) {
 	return task, nil
 }
 
-func (s *SchedulerModel) Put(ctx context.Context, task *Task) error {
+func (s *SchedulerModel) Update(ctx context.Context, task *Task) error {
 	query := `UPDATE scheduler SET date = :date, title = :title, comment = :comment, repeat = :repeat` + whereId
 	res, err := s.DB.ExecContext(ctx, query,
 		sql.Named("date", task.Date),
@@ -117,6 +118,39 @@ func (s *SchedulerModel) Put(ctx context.Context, task *Task) error {
 	)
 	if err != nil {
 		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rows affected: %w", err)
+	}
+	if count == 0 {
+		return fmt.Errorf("incorrect id for updating task")
+	}
+	return nil
+}
+
+func (s *SchedulerModel) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM scheduler ` + whereId
+	res, err := s.DB.ExecContext(ctx, query, sql.Named("id", id))
+	if err != nil {
+		return fmt.Errorf("delete task: %w", err)
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rows affected: %w", err)
+	}
+	if count == 0 {
+		return fmt.Errorf("incorrect id for updating task")
+	}
+	return nil
+
+}
+
+func (s *SchedulerModel) UpdateDate(ctx context.Context, next string, id string) error {
+	query := `UPDATE scheduler SET date = :date ` + whereId
+	res, err := s.DB.ExecContext(ctx, query, sql.Named("date", next), sql.Named("id", id))
+	if err != nil {
+		return fmt.Errorf("delete task: %w", err)
 	}
 	count, err := res.RowsAffected()
 	if err != nil {

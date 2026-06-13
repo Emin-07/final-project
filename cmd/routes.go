@@ -15,8 +15,11 @@ func (app *application) routes() http.Handler {
 	router.Post("/api/task", app.addTaskHandler)
 	router.Get("/api/task", app.taskHandler)
 	router.Put("/api/task", app.changeTaskHandler)
+	router.Delete("/api/task", app.deleteTaskHandler)
 
 	router.Get("/api/tasks", app.tasksHandler)
+
+	router.Post("/api/task/done", app.completeTaskHandler)
 
 	return router
 }
