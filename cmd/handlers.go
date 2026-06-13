@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Emin-07/final-project/internal/models"
@@ -15,11 +16,11 @@ func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
 	repeat := r.FormValue("repeat")
 
 	if date == "" {
-		http.Error(w, "no date passed in parameters", http.StatusBadRequest)
+		app.jsonError(w, "no date passed in parameters", http.StatusBadRequest)
 		return
 	}
 	if repeat == "" {
-		http.Error(w, "no repeat passed in parameters", http.StatusBadRequest)
+		app.jsonError(w, "no repeat passed in parameters", http.StatusBadRequest)
 		return
 	}
 	var now time.Time
@@ -29,18 +30,19 @@ func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
 	} else {
 		now, err = time.Parse(dateFormat, nowStr)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			app.jsonError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 
 	res, err := NextDate(now, date, repeat)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.Write([]byte(res))
+	app.writeJson(w, res, http.StatusOK)
 }
+
 func checkDate(task *models.Task) error {
 	now := time.Now()
 	if task.Date == "" {
@@ -73,42 +75,49 @@ func (app *application) addTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = json.Unmarshal(data, &task)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if task.Title == "" {
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Не указан заголовок задачи"})
+		app.jsonError(w, "Не указан заголовок задачи", http.StatusBadRequest)
 		return
 	}
 	err = checkDate(&task)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	id, err := app.schedule.AddTask(r.Context(), &task)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]int64{"id": id})
+	app.writeJson(w, map[string]int64{"id": id}, http.StatusCreated)
+	return
+
+}
+
+type TasksResp struct {
+	Tasks []*models.Task `json:"tasks"`
+}
+
+func (app *application) tasksHandler(w http.ResponseWriter, r *http.Request) {
+	searchParameter := r.URL.Query().Get("search")
+	tasks, err := app.schedule.Tasks(r.Context(), 50, strings.TrimSpace(searchParameter))
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	app.writeJson(w, TasksResp{
+		Tasks: tasks,
+	}, http.StatusOK)
+	return
 
 }
