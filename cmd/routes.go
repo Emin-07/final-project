@@ -13,6 +13,8 @@ func (app *application) routes() http.Handler {
 	router.Get("/api/nextdate", app.getNextDate)
 
 	router.Post("/api/task", app.addTaskHandler)
+	router.Get("/api/task", app.taskHandler)
+	router.Put("/api/task", app.changeTaskHandler)
 
 	router.Get("/api/tasks", app.tasksHandler)
 

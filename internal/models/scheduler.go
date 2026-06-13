@@ -10,6 +10,7 @@ import (
 )
 
 const selectAllFromScheduler = `SELECT id, date, title, comment, repeat FROM scheduler `
+const whereId = ` WHERE id = :id`
 
 //go:embed create_schedule_table.sql
 var createTableSQL string
@@ -33,7 +34,7 @@ func (s *SchedulerModel) InitScheduleTable(ctx context.Context) error {
 	return err
 }
 
-func (s *SchedulerModel) AddTask(ctx context.Context, task *Task) (int64, error) {
+func (s *SchedulerModel) Add(ctx context.Context, task *Task) (int64, error) {
 	query := `INSERT INTO scheduler(date, title, comment, repeat) VALUES (:date, :title, :comment, :repeat)`
 	res, err := s.DB.ExecContext(ctx, query,
 		sql.Named("date", task.Date),
@@ -90,4 +91,39 @@ func (s *SchedulerModel) Tasks(ctx context.Context, limit int, search string) ([
 		return []*Task{}, nil
 	}
 	return tasks, nil
+}
+
+func (s *SchedulerModel) Get(ctx context.Context, id string) (*Task, error) {
+	query := selectAllFromScheduler + whereId
+	task := &Task{}
+	err := s.DB.QueryRowContext(ctx, query, sql.Named("id", id)).Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoRecord
+		}
+		return nil, err
+	}
+	return task, nil
+}
+
+func (s *SchedulerModel) Put(ctx context.Context, task *Task) error {
+	query := `UPDATE scheduler SET date = :date, title = :title, comment = :comment, repeat = :repeat` + whereId
+	res, err := s.DB.ExecContext(ctx, query,
+		sql.Named("date", task.Date),
+		sql.Named("title", task.Title),
+		sql.Named("comment", task.Comment),
+		sql.Named("repeat", task.Repeat),
+		sql.Named("id", task.ID),
+	)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rows affected: %w", err)
+	}
+	if count == 0 {
+		return fmt.Errorf("incorrect id for updating task")
+	}
+	return nil
 }

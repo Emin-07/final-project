@@ -44,7 +44,7 @@ func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkDate(task *models.Task) error {
-	now := time.Now()
+	now := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
 	if task.Date == "" {
 		task.Date = now.Format(dateFormat)
 	}
@@ -94,14 +94,48 @@ func (app *application) addTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := app.schedule.AddTask(r.Context(), &task)
+	id, err := app.schedule.Add(r.Context(), &task)
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	app.writeJson(w, map[string]int64{"id": id}, http.StatusCreated)
-	return
+}
+func (app *application) taskHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		app.jsonError(w, "Не указан идентификатор", http.StatusBadRequest)
+		return
+	}
+	task, err := app.schedule.Get(r.Context(), id)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	app.writeJson(w, task, http.StatusOK)
+}
 
+func (app *application) changeTaskHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	task := &models.Task{}
+	err = json.Unmarshal(data, &task)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	task.ID = id
+	err = app.schedule.Put(r.Context(), task)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	app.writeJson(w, "{}", http.StatusOK)
 }
 
 type TasksResp struct {
@@ -118,6 +152,5 @@ func (app *application) tasksHandler(w http.ResponseWriter, r *http.Request) {
 	app.writeJson(w, TasksResp{
 		Tasks: tasks,
 	}, http.StatusOK)
-	return
 
 }
