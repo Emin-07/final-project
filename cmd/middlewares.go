@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
@@ -18,7 +17,6 @@ func auth(next http.HandlerFunc) http.HandlerFunc {
 			cookie, err := r.Cookie("token")
 			if err == nil {
 				tokenStr = cookie.Value
-				fmt.Println(tokenStr)
 			}
 			valid := false
 

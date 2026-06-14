@@ -248,7 +248,7 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+		ExpiresAt: time.Now().Add(8 * time.Hour).Unix(),
 		Subject:   passHashed,
 	})
 
@@ -260,5 +260,12 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.SetCookie(w, &http.Cookie{
+		Name:   "token",
+		Value:  "",
+		MaxAge: -1,
+		Path:   "/",
+	})
+	fmt.Printf("{ \"token\": %v }\n", tokenString)
 	app.writeJson(w, map[string]string{"token": tokenString}, http.StatusOK)
 }
