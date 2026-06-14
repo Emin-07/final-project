@@ -30,8 +30,17 @@ type SchedulerModel struct {
 	DB *sql.DB
 }
 
-func (s *SchedulerModel) InitScheduleTable(ctx context.Context) error {
-	_, err := s.DB.ExecContext(ctx, createTableSQL)
+func HasAnyTables(ctx context.Context, db *sql.DB, query string) (bool, error) {
+	var count int
+	err := db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
+func InitScheduleTable(ctx context.Context, db *sql.DB) error {
+	_, err := db.ExecContext(ctx, createTableSQL)
 	return err
 }
 

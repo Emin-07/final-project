@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/Emin-07/final-project/internal/models"
+	"github.com/golang-jwt/jwt"
 )
 
 func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
@@ -217,4 +219,46 @@ func (app *application) deleteTaskHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	app.writeJson(w, map[string]string{}, http.StatusOK)
+}
+
+func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
+	userPassword := map[string]string{}
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = json.Unmarshal(data, &userPassword)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	actualPassword := os.Getenv("TODO_PASSWORD")
+	passHashed, err := hashPassword(actualPassword)
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if !checkPasswordHash(userPassword["password"], passHashed) {
+		app.jsonError(w, "Неверный пароль", http.StatusBadRequest)
+		return
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+		Subject:   passHashed,
+	})
+
+	key := os.Getenv("JWT_KEY")
+
+	tokenString, err := token.SignedString([]byte(key))
+	if err != nil {
+		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	app.writeJson(w, map[string]string{"token": tokenString}, http.StatusOK)
 }

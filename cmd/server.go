@@ -14,10 +14,7 @@ import (
 
 func (app *application) Run() error {
 
-	port, err := getEnv("TODO_PORT")
-	if err != nil {
-		log.Fatalf("Got error: %v", err)
-	}
+	port := os.Getenv("TODO_PORT")
 
 	srv := &http.Server{
 		Addr:         port,
