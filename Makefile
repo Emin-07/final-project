@@ -13,6 +13,7 @@ dev:
 build:
 	CGO_ENABLED=0 GOOS=linux go build -o scheduler ./cmd/
 
+
 docker-build:
 	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
 

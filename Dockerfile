@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM scratch
 
 ENV TODO_PORT=:7540
 ENV TODO_DBFILE=scheduler.db

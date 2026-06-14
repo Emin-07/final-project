@@ -169,6 +169,10 @@ func (app *application) tasksHandler(w http.ResponseWriter, r *http.Request) {
 	searchParameter := r.URL.Query().Get("search")
 	limitParameter := r.URL.Query().Get("limit")
 
+	if limitParameter == "" {
+		limitParameter = "50"
+	}
+
 	tasks, err := app.schedule.Tasks(r.Context(), limitParameter, strings.TrimSpace(searchParameter))
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
