@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"log"
 	"os"
 
@@ -15,7 +17,6 @@ type application struct {
 
 func init() {
 	initializers.LoadEnvVariables()
-	initializers.InitDB()
 }
 
 func main() {
@@ -34,4 +35,33 @@ func main() {
 	if err = app.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func createTablesAndOpenDB(dsn string) (*sql.DB, error) {
+	// dsn == db name if it's sqlite you're using
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = db.Ping(); err != nil {
+		return nil, err
+	}
+
+	// Adding table into db if it's empty
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	isEmpty, err := models.HasNoTables(ctx, db, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
+	if err != nil {
+		return nil, err
+	}
+
+	if isEmpty {
+		err = models.InitScheduleTable(ctx, db)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return db, nil
 }

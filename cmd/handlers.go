@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/Emin-07/final-project/internal/models"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
@@ -31,14 +31,14 @@ func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
 	if nowStr == "" {
 		now = time.Now()
 	} else {
-		now, err = time.Parse(dateFormat, nowStr)
+		now, err = time.Parse(models.DateFormat, nowStr)
 		if err != nil {
 			app.jsonError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
 
-	res, err := NextDate(now, date, repeat)
+	res, err := models.NextDate(now, date, repeat)
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -50,9 +50,9 @@ func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
 func checkDate(task *models.Task) error {
 	now := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
 	if task.Date == "" {
-		task.Date = now.Format(dateFormat)
+		task.Date = now.Format(models.DateFormat)
 	}
-	t, err := time.Parse(dateFormat, task.Date)
+	t, err := time.Parse(models.DateFormat, task.Date)
 	if err != nil {
 		return err
 	}
@@ -60,10 +60,10 @@ func checkDate(task *models.Task) error {
 	if now.After(t) {
 		if len(task.Repeat) == 0 {
 			// если правила повторения нет, то берём сегодняшнее число
-			task.Date = now.Format(dateFormat)
+			task.Date = now.Format(models.DateFormat)
 		} else {
 			// в противном случае, берём вычисленную ранее следующую дату
-			next, err := NextDate(now, task.Date, task.Repeat)
+			next, err := models.NextDate(now, task.Date, task.Repeat)
 			if err != nil {
 				return err
 			}
@@ -167,7 +167,9 @@ type TasksResp struct {
 
 func (app *application) tasksHandler(w http.ResponseWriter, r *http.Request) {
 	searchParameter := r.URL.Query().Get("search")
-	tasks, err := app.schedule.Tasks(r.Context(), 50, strings.TrimSpace(searchParameter))
+	limitParameter := r.URL.Query().Get("limit")
+
+	tasks, err := app.schedule.Tasks(r.Context(), limitParameter, strings.TrimSpace(searchParameter))
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -193,7 +195,7 @@ func (app *application) completeTaskHandler(w http.ResponseWriter, r *http.Reque
 		}
 	} else {
 		now := time.Now()
-		nextDate, err := NextDate(now, task.Date, task.Repeat)
+		nextDate, err := models.NextDate(now, task.Date, task.Repeat)
 		if err != nil {
 			app.jsonError(w, err.Error(), http.StatusBadRequest)
 			return
@@ -246,9 +248,9 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(8 * time.Hour).Unix(),
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(8 * time.Hour)),
 		Subject:   passHashed,
 	})
 
@@ -266,6 +268,6 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 		Path:   "/",
 	})
-	fmt.Printf("{ \"token\": %v }\n", tokenString)
+	//fmt.Printf("{ \"token\": %v }\n", tokenString) // for dev
 	app.writeJson(w, map[string]string{"token": tokenString}, http.StatusOK)
 }

@@ -30,7 +30,7 @@ type SchedulerModel struct {
 	DB *sql.DB
 }
 
-func HasAnyTables(ctx context.Context, db *sql.DB, query string) (bool, error) {
+func HasNoTables(ctx context.Context, db *sql.DB, query string) (bool, error) {
 	var count int
 	err := db.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
@@ -61,7 +61,7 @@ func (s *SchedulerModel) Add(ctx context.Context, task *Task) (int64, error) {
 	return id, nil
 }
 
-func (s *SchedulerModel) Tasks(ctx context.Context, limit int, search string) ([]*Task, error) {
+func (s *SchedulerModel) Tasks(ctx context.Context, limit string, search string) ([]*Task, error) {
 	var err error
 	var rows *sql.Rows
 	if search == "" {
@@ -126,7 +126,7 @@ func (s *SchedulerModel) Update(ctx context.Context, task *Task) error {
 		sql.Named("id", task.ID),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("update task: %w", err)
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
@@ -159,7 +159,7 @@ func (s *SchedulerModel) UpdateDate(ctx context.Context, next string, id string)
 	query := `UPDATE scheduler SET date = :date ` + whereId
 	res, err := s.DB.ExecContext(ctx, query, sql.Named("date", next), sql.Named("id", id))
 	if err != nil {
-		return fmt.Errorf("delete task: %w", err)
+		return fmt.Errorf("update date task: %w", err)
 	}
 	count, err := res.RowsAffected()
 	if err != nil {

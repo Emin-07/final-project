@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const dateFormat = "20060102"
+const DateFormat = "20060102"
 
 const maxDayAmount = 400
 
@@ -44,11 +44,11 @@ func processDate(now, startTime time.Time, key string, val int) (string, error) 
 		startTime = startTime.AddDate(dateToAdd["year"], 0, dateToAdd["days"])
 	}
 
-	return startTime.Format(dateFormat), nil
+	return startTime.Format(DateFormat), nil
 }
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
-	startTime, err := time.Parse(dateFormat, dstart)
+	startTime, err := time.Parse(DateFormat, dstart)
 
 	if err != nil {
 		return "", err
@@ -65,7 +65,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			return "", err
 		}
 		if daysToAdd > maxDayAmount {
-			return "", fmt.Errorf("you can only add up to %d amount of days, %d is too much")
+			return "", fmt.Errorf("you can only add up to %d amount of days, %d is too much", maxDayAmount, daysToAdd)
 		}
 		return processDate(now, startTime, "days", daysToAdd)
 	case "y":
@@ -96,7 +96,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 
 		for {
 			if startTime.After(now) && slices.Contains(weekDays, int(startTime.Weekday())) {
-				return startTime.Format(dateFormat), nil
+				return startTime.Format(DateFormat), nil
 			}
 			startTime = startTime.AddDate(0, 0, 1)
 		}
@@ -141,7 +141,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				startTime = startTime.AddDate(0, 0, 1)
 			}
 			if startTime.After(now) && slices.Contains(adjustedNegativeMonthDays(monthDays, startTime), startTime.Day()) && slices.Contains(months, int(startTime.Month())) {
-				return startTime.Format(dateFormat), nil
+				return startTime.Format(DateFormat), nil
 			}
 		}
 	}

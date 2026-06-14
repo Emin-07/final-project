@@ -1,19 +1,14 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/Emin-07/final-project/internal/models"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
-
-const tablesCheckSqliteQuery = `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`
 
 func (app *application) writeJson(w http.ResponseWriter, v any, status int) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -31,38 +26,6 @@ func keyFunc(token *jwt.Token) (interface{}, error) {
 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 	}
 	return []byte(key), nil
-}
-
-func createTablesAndOpenDB(dsn string) (*sql.DB, error) {
-	// dsn == db name if it's sqlite you're using
-	dbName := os.Getenv("TODO_DBFILE")
-	if dbName == "" {
-		dbName = "scheduler.db"
-	}
-	db, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	// Adding table into db if it's empty
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	isEmpty, err := models.HasAnyTables(ctx, db, tablesCheckSqliteQuery)
-	if err != nil {
-		return nil, err
-	}
-
-	if isEmpty {
-		err = models.InitScheduleTable(ctx, db)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if err = db.Ping(); err != nil {
-		return nil, err
-	}
-	return db, nil
 }
 
 func hashPassword(password string) (string, error) {

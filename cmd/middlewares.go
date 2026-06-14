@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func auth(next http.HandlerFunc) http.HandlerFunc {
@@ -20,7 +20,7 @@ func auth(next http.HandlerFunc) http.HandlerFunc {
 			}
 			valid := false
 
-			claims := &jwt.StandardClaims{}
+			claims := &jwt.RegisteredClaims{}
 			_, err = jwt.ParseWithClaims(tokenStr, claims, keyFunc)
 			if err == nil {
 				if checkPasswordHash(pass, claims.Subject) {
