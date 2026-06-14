@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -240,8 +239,7 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actualPassword := os.Getenv("TODO_PASSWORD")
-	passHashed, err := hashPassword(actualPassword)
+	passHashed, err := hashPassword(app.config.password)
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -258,9 +256,7 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 		Subject:   passHashed,
 	})
 
-	key := os.Getenv("JWT_KEY")
-
-	tokenString, err := token.SignedString([]byte(key))
+	tokenString, err := token.SignedString([]byte(app.config.jwtKey))
 	if err != nil {
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -272,6 +268,6 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 		Path:   "/",
 	})
-	//fmt.Printf("{ \"token\": %v }\n", tokenString) // for dev
+	fmt.Printf("{ \"token\": %v }\n", tokenString) // for dev
 	app.writeJson(w, map[string]string{"token": tokenString}, http.StatusOK)
 }

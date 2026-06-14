@@ -14,10 +14,8 @@ import (
 
 func (app *application) Run() error {
 
-	port := os.Getenv("TODO_PORT")
-
 	srv := &http.Server{
-		Addr:         port,
+		Addr:         app.config.port,
 		Handler:      app.routes(),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -31,7 +29,7 @@ func (app *application) Run() error {
 
 	serverErr := make(chan error, 1)
 	go func() {
-		fmt.Printf("Starting server at http://localhost%s...\n", port)
+		fmt.Printf("Starting server at http://localhost%s...\n", app.config.port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErr <- err
 		}

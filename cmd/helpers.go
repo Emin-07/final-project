@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -20,12 +19,11 @@ func (app *application) jsonError(w http.ResponseWriter, error string, status in
 	app.writeJson(w, map[string]string{"error": error}, status)
 }
 
-func keyFunc(token *jwt.Token) (interface{}, error) {
-	key := os.Getenv("JWT_KEY")
+func (app *application) keyFunc(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 	}
-	return []byte(key), nil
+	return []byte(app.config.jwtKey), nil
 }
 
 func hashPassword(password string) (string, error) {

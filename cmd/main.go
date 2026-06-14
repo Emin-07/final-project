@@ -11,7 +11,14 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+type config struct {
+	port     string
+	password string
+	jwtKey   string
+}
+
 type application struct {
+	config   config
 	schedule *models.SchedulerModel
 }
 
@@ -29,6 +36,11 @@ func main() {
 	defer db.Close()
 
 	app := &application{
+		config: config{
+			port:     os.Getenv("TODO_PORT"),
+			password: os.Getenv("TODO_PASSWORD"),
+			jwtKey:   os.Getenv("JWT_KEY"),
+		},
 		schedule: &models.SchedulerModel{DB: db},
 	}
 
