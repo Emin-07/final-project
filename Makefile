@@ -2,7 +2,7 @@ IMAGE_NAME=todo-scheduler
 IMAGE_TAG=v1
 PORT=7540
 
-.PHONY: run dev build docker-build docker-run test
+.PHONY: run dev build docker-build docker-run test env
 
 run:
 	go run ./cmd
@@ -22,3 +22,6 @@ docker-run:
 
 test:
 	go test ./...
+
+env:
+	cp .env.example .env

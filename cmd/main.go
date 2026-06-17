@@ -6,9 +6,10 @@ import (
 	"log"
 	"os"
 
+	_ "modernc.org/sqlite"
+
 	"github.com/Emin-07/final-project/internal/initializers"
 	"github.com/Emin-07/final-project/internal/models"
-	_ "modernc.org/sqlite"
 )
 
 type config struct {

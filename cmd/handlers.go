@@ -2,14 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/Emin-07/final-project/internal/models"
 	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/Emin-07/final-project/internal/models"
 )
 
 func (app *application) getNextDate(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +101,7 @@ func (app *application) addTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	id, err := app.schedule.Add(r.Context(), &task)
 	if err != nil {
-		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		app.jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	app.writeJson(w, map[string]int64{"id": id}, http.StatusCreated)
@@ -120,6 +122,9 @@ func (app *application) getTask(r *http.Request) (*models.Task, error) {
 func (app *application) taskHandler(w http.ResponseWriter, r *http.Request) {
 	task, err := app.getTask(r)
 	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.jsonError(w, err.Error(), http.StatusNotFound)
+		}
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -186,6 +191,9 @@ func (app *application) tasksHandler(w http.ResponseWriter, r *http.Request) {
 func (app *application) completeTaskHandler(w http.ResponseWriter, r *http.Request) {
 	task, err := app.getTask(r)
 	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.jsonError(w, err.Error(), http.StatusNotFound)
+		}
 		app.jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -241,7 +249,7 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 
 	passHashed, err := hashPassword(app.config.password)
 	if err != nil {
-		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		app.jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -258,7 +266,7 @@ func (app *application) signInHandler(w http.ResponseWriter, r *http.Request) {
 
 	tokenString, err := token.SignedString([]byte(app.config.jwtKey))
 	if err != nil {
-		app.jsonError(w, err.Error(), http.StatusBadRequest)
+		app.jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

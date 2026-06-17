@@ -78,9 +78,6 @@ func (s *SchedulerModel) Tasks(ctx context.Context, limit string, search string)
 		}
 	}
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoRecord
-		}
 		return nil, err
 	}
 	defer rows.Close()
