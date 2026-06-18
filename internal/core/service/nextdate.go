@@ -1,4 +1,4 @@
-package models
+package services
 
 import (
 	"fmt"
@@ -47,7 +47,7 @@ func processDate(now, startTime time.Time, key string, val int) (string, error) 
 	return startTime.Format(DateFormat), nil
 }
 
-func NextDate(now time.Time, dstart string, repeat string) (string, error) {
+func (ss *SchedulerServ) NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	startTime, err := time.Parse(DateFormat, dstart)
 
 	if err != nil {

@@ -1,4 +1,4 @@
-package models
+package scheduler
 
 import (
 	"context"
@@ -7,44 +7,20 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/Emin-07/final-project/internal/core/domain"
 )
 
-const selectAllFromScheduler = "SELECT id, date, title, comment, repeat FROM scheduler "
-const whereId = " WHERE id = :id "
-const limitQuery = " LIMIT :limit "
+const (
+	selectAllFromScheduler = "SELECT id, date, title, comment, repeat FROM scheduler "
+	whereId                = " WHERE id = :id "
+	limitQuery             = " LIMIT :limit "
+)
 
 //go:embed create_schedule_table.sql
 var createTableSQL string
 
-type Task struct {
-	ID      string `json:"id"`
-	Date    string `json:"date"`
-	Title   string `json:"title"`
-	Comment string `json:"comment"`
-	Repeat  string `json:"repeat"`
-}
-
-// TODO: Make interface to make it abstract and easier to test 'just to flex'
-
-type SchedulerModel struct {
-	DB *sql.DB
-}
-
-func HasNoTables(ctx context.Context, db *sql.DB, query string) (bool, error) {
-	var count int
-	err := db.QueryRowContext(ctx, query).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count == 0, nil
-}
-
-func InitScheduleTable(ctx context.Context, db *sql.DB) error {
-	_, err := db.ExecContext(ctx, createTableSQL)
-	return err
-}
-
-func (s *SchedulerModel) Add(ctx context.Context, task *Task) (int64, error) {
+func (s *SchedulerRepo) Add(ctx context.Context, task *domain.Task) (int64, error) {
 	query := `INSERT INTO scheduler(date, title, comment, repeat) VALUES (:date, :title, :comment, :repeat)`
 	res, err := s.DB.ExecContext(ctx, query,
 		sql.Named("date", task.Date),
@@ -61,7 +37,7 @@ func (s *SchedulerModel) Add(ctx context.Context, task *Task) (int64, error) {
 	return id, nil
 }
 
-func (s *SchedulerModel) Tasks(ctx context.Context, limit string, search string) ([]*Task, error) {
+func (s *SchedulerRepo) Tasks(ctx context.Context, limit string, search string) ([]*domain.Task, error) {
 	var err error
 	var rows *sql.Rows
 	if search == "" {
@@ -82,10 +58,10 @@ func (s *SchedulerModel) Tasks(ctx context.Context, limit string, search string)
 	}
 	defer rows.Close()
 
-	var tasks []*Task
+	var tasks []*domain.Task
 
 	for rows.Next() {
-		task := &Task{}
+		task := &domain.Task{}
 		if err = rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat); err != nil {
 			return nil, err
 		}
@@ -95,25 +71,25 @@ func (s *SchedulerModel) Tasks(ctx context.Context, limit string, search string)
 		return nil, err
 	}
 	if tasks == nil {
-		return []*Task{}, nil
+		return []*domain.Task{}, nil
 	}
 	return tasks, nil
 }
 
-func (s *SchedulerModel) Get(ctx context.Context, id string) (*Task, error) {
+func (s *SchedulerRepo) Get(ctx context.Context, id string) (*domain.Task, error) {
 	query := selectAllFromScheduler + whereId
-	task := &Task{}
+	task := &domain.Task{}
 	err := s.DB.QueryRowContext(ctx, query, sql.Named("id", id)).Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoRecord
+			return nil, domain.ErrNoRecord
 		}
 		return nil, err
 	}
 	return task, nil
 }
 
-func (s *SchedulerModel) Update(ctx context.Context, task *Task) error {
+func (s *SchedulerRepo) Update(ctx context.Context, task *domain.Task) error {
 	query := `UPDATE scheduler SET date = :date, title = :title, comment = :comment, repeat = :repeat` + whereId
 	res, err := s.DB.ExecContext(ctx, query,
 		sql.Named("date", task.Date),
@@ -135,7 +111,23 @@ func (s *SchedulerModel) Update(ctx context.Context, task *Task) error {
 	return nil
 }
 
-func (s *SchedulerModel) Delete(ctx context.Context, id string) error {
+func (s *SchedulerRepo) UpdateDate(ctx context.Context, next string, id string) error {
+	query := `UPDATE scheduler SET date = :date ` + whereId
+	res, err := s.DB.ExecContext(ctx, query, sql.Named("date", next), sql.Named("id", id))
+	if err != nil {
+		return fmt.Errorf("update date task: %w", err)
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("rows affected: %w", err)
+	}
+	if count == 0 {
+		return fmt.Errorf("incorrect id for updating task")
+	}
+	return nil
+}
+
+func (s *SchedulerRepo) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM scheduler ` + whereId
 	res, err := s.DB.ExecContext(ctx, query, sql.Named("id", id))
 	if err != nil {
@@ -152,18 +144,34 @@ func (s *SchedulerModel) Delete(ctx context.Context, id string) error {
 
 }
 
-func (s *SchedulerModel) UpdateDate(ctx context.Context, next string, id string) error {
-	query := `UPDATE scheduler SET date = :date ` + whereId
-	res, err := s.DB.ExecContext(ctx, query, sql.Named("date", next), sql.Named("id", id))
+func HasNoTables(ctx context.Context, db *sql.DB, query string) (bool, error) {
+	var count int
+	err := db.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
-		return fmt.Errorf("update date task: %w", err)
+		return false, err
 	}
-	count, err := res.RowsAffected()
+	return count == 0, nil
+}
+
+func InitScheduleTable(ctx context.Context, db *sql.DB) error {
+	_, err := db.ExecContext(ctx, createTableSQL)
+	return err
+}
+
+func (s *SchedulerRepo) InitDataIntoDb(db *sql.DB) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	isEmpty, err := HasNoTables(ctx, db, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
 	if err != nil {
-		return fmt.Errorf("rows affected: %w", err)
+		return err
 	}
-	if count == 0 {
-		return fmt.Errorf("incorrect id for updating task")
+
+	if isEmpty {
+		err = InitScheduleTable(ctx, db)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
