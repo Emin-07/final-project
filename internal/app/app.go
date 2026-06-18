@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/Emin-07/final-project/internal/adapter/handler"
-	"github.com/Emin-07/final-project/internal/core/port"
 )
 
 type Config struct {
@@ -14,10 +13,8 @@ type Config struct {
 }
 
 type App struct {
-	Cfg                  *Config
-	schedulerHandler     *handler.SchedulerHandler
-	schedulerServicePort ports.SchedulerService
-	schedulerRepoPort    ports.SchedulerRepo
+	Cfg              *Config
+	schedulerHandler *handler.SchedulerHandler
 }
 
 type Option func(*App)
@@ -40,16 +37,5 @@ func NewApp(opts ...Option) *App {
 func WithHandler(schedulerHandler *handler.SchedulerHandler) Option {
 	return func(a *App) {
 		a.schedulerHandler = schedulerHandler
-	}
-}
-
-func WithService(schedulerServicePort ports.SchedulerService) Option {
-	return func(a *App) {
-		a.schedulerServicePort = schedulerServicePort
-	}
-}
-func WithRepo(schedulerRepoPort ports.SchedulerRepo) Option {
-	return func(a *App) {
-		a.schedulerRepoPort = schedulerRepoPort
 	}
 }

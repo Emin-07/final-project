@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Emin-07/final-project/internal/core/domain"
+	"github.com/Emin-07/final-project/internal/core/service"
 	"github.com/Emin-07/final-project/internal/pkg/hash"
 )
 
@@ -27,7 +28,7 @@ func (sh *SchedulerHandler) getNextDate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	now, err := sh.service.ValidateStringTime(nowStr)
+	now, err := service.ValidateStringTime(nowStr)
 	if err != nil {
 		JsonError(w, err.Error(), http.StatusBadRequest)
 		return
@@ -163,23 +164,10 @@ func (sh *SchedulerHandler) completeTaskHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if task.Repeat == "" {
-		err = sh.service.DeleteTask(r.Context(), task.ID)
-		if err != nil {
-			JsonError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	} else {
-		nextDate, err := sh.service.NextDate(sh.service.GetNowYMD(), task.Date, task.Repeat)
-		if err != nil {
-			JsonError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		err = sh.service.ChangeTaskDate(r.Context(), nextDate, task.ID)
-		if err != nil {
-			JsonError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	err = sh.service.CompleteTask(r.Context(), task)
+	if err != nil {
+		JsonError(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	WriteJson(w, map[string]string{}, http.StatusOK)
 }
@@ -222,7 +210,7 @@ func (sh *SchedulerHandler) signInHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	tokenStr, err := sh.service.StringToken(passHashed)
+	tokenStr, err := service.StringToken(passHashed)
 	if err != nil {
 		JsonError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -234,6 +222,6 @@ func (sh *SchedulerHandler) signInHandler(w http.ResponseWriter, r *http.Request
 		MaxAge: -1,
 		Path:   "/",
 	})
-	fmt.Printf("{ \"token\": %v }\n", tokenStr) // for dev
+	//fmt.Printf("{ \"token\": %v }\n", tokenStr) // for dev
 	WriteJson(w, map[string]string{"token": tokenStr}, http.StatusOK)
 }

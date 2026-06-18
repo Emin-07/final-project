@@ -1,4 +1,4 @@
-package services
+package service
 
 import (
 	"context"
@@ -31,8 +31,23 @@ func (ss *SchedulerServ) GetTasks(ctx context.Context, limit string, search stri
 
 }
 
-func (ss *SchedulerServ) CompleteTask(ctx context.Context, date string, id string) error {
-	return ss.repo.UpdateDate(ctx, date, id)
+func (ss *SchedulerServ) CompleteTask(ctx context.Context, task *domain.Task) error {
+	if task.Repeat == "" {
+		err := ss.DeleteTask(ctx, task.ID)
+		if err != nil {
+			return err
+		}
+	} else {
+		nextDate, err := ss.NextDate(GetNowYMD(), task.Date, task.Repeat)
+		if err != nil {
+			return err
+		}
+		err = ss.ChangeTaskDate(ctx, nextDate, task.ID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (ss *SchedulerServ) DeleteTask(ctx context.Context, id string) error {

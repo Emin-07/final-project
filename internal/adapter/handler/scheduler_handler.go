@@ -5,9 +5,9 @@ import (
 )
 
 type SchedulerHandler struct {
-	service ports.SchedulerService
+	service port.SchedulerService
 }
 
-func NewSchedulerHandler(service ports.SchedulerService) *SchedulerHandler {
+func NewSchedulerHandler(service port.SchedulerService) *SchedulerHandler {
 	return &SchedulerHandler{service: service}
 }

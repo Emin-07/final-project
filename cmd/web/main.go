@@ -40,16 +40,14 @@ func main() {
 	}
 	defer db.Close()
 	newRepo := scheduler.NewSchedulerRepo(db)
-	err = newRepo.InitDataIntoDb(db)
+	err = newRepo.InitDataIntoDb()
 	if err != nil {
 		log.Fatalf("couldn't initialize tables to database: %v", err)
 	}
-	newService := services.NewSchedulerService(newRepo)
+	newService := service.NewSchedulerService(newRepo)
 	newHandler := handler.NewSchedulerHandler(newService)
 
-	application := app.NewApp(app.WithHandler(newHandler),
-		app.WithService(newService),
-		app.WithRepo(newRepo))
+	application := app.NewApp(app.WithHandler(newHandler))
 
 	srv := application.NewServer()
 

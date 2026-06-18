@@ -158,16 +158,16 @@ func InitScheduleTable(ctx context.Context, db *sql.DB) error {
 	return err
 }
 
-func (s *SchedulerRepo) InitDataIntoDb(db *sql.DB) error {
+func (s *SchedulerRepo) InitDataIntoDb() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	isEmpty, err := HasNoTables(ctx, db, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
+	isEmpty, err := HasNoTables(ctx, s.DB, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
 	if err != nil {
 		return err
 	}
 
 	if isEmpty {
-		err = InitScheduleTable(ctx, db)
+		err = InitScheduleTable(ctx, s.DB)
 		if err != nil {
 			return err
 		}
