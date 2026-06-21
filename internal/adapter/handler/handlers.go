@@ -97,10 +97,7 @@ func (sh *SchedulerHandler) listTasks(r *http.Request) ([]*domain.Task, error) {
 func (sh *SchedulerHandler) tasksHandler(w http.ResponseWriter, r *http.Request) {
 	task, err := sh.getTask(r)
 	if err != nil {
-		if errors.Is(err, domain.ErrNoRecord) {
-			JsonError(w, fmt.Sprintf("нет задания с переданным id: %v", err.Error()), http.StatusNotFound)
-			return
-		} else if errors.Is(err, noIdProvidedErr) {
+		if errors.Is(err, noIdProvidedErr) {
 			tasks, err := sh.listTasks(r)
 			if err != nil {
 				JsonError(w, err.Error(), http.StatusBadRequest)
@@ -109,6 +106,9 @@ func (sh *SchedulerHandler) tasksHandler(w http.ResponseWriter, r *http.Request)
 			WriteJson(w, TasksResp{
 				Tasks: tasks,
 			}, http.StatusOK)
+			return
+		} else if errors.Is(err, domain.ErrNoRecord) {
+			JsonError(w, fmt.Sprintf("нет задания с переданным id: %v", err.Error()), http.StatusNotFound)
 			return
 		}
 		JsonError(w, err.Error(), http.StatusNotFound)
