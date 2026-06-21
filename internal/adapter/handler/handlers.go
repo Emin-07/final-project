@@ -78,7 +78,7 @@ func (sh *SchedulerHandler) addTaskHandler(w http.ResponseWriter, r *http.Reques
 func (sh *SchedulerHandler) getTask(r *http.Request) (*domain.Task, error) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		return nil, fmt.Errorf("Не указан идентификатор")
+		return nil, noIdProvidedErr
 	}
 	task, err := sh.service.GetTask(r.Context(), id)
 	if err != nil {
@@ -87,14 +87,31 @@ func (sh *SchedulerHandler) getTask(r *http.Request) (*domain.Task, error) {
 	return task, nil
 }
 
-func (sh *SchedulerHandler) taskHandler(w http.ResponseWriter, r *http.Request) {
+func (sh *SchedulerHandler) listTasks(r *http.Request) ([]*domain.Task, error) {
+	searchParameter := r.URL.Query().Get("search")
+	limitParameter := r.URL.Query().Get("limit")
+
+	return sh.service.GetTasks(r.Context(), limitParameter, strings.TrimSpace(searchParameter))
+}
+
+func (sh *SchedulerHandler) tasksHandler(w http.ResponseWriter, r *http.Request) {
 	task, err := sh.getTask(r)
 	if err != nil {
 		if errors.Is(err, domain.ErrNoRecord) {
 			JsonError(w, fmt.Sprintf("нет задания с переданным id: %v", err.Error()), http.StatusNotFound)
 			return
+		} else if errors.Is(err, noIdProvidedErr) {
+			tasks, err := sh.listTasks(r)
+			if err != nil {
+				JsonError(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			WriteJson(w, TasksResp{
+				Tasks: tasks,
+			}, http.StatusOK)
+			return
 		}
-		JsonError(w, err.Error(), http.StatusBadRequest)
+		JsonError(w, err.Error(), http.StatusNotFound)
 		return
 	}
 	WriteJson(w, task, http.StatusOK)
@@ -136,21 +153,6 @@ func (sh *SchedulerHandler) changeTaskHandler(w http.ResponseWriter, r *http.Req
 
 type TasksResp struct {
 	Tasks []*domain.Task `json:"tasks"`
-}
-
-func (sh *SchedulerHandler) tasksHandler(w http.ResponseWriter, r *http.Request) {
-	searchParameter := r.URL.Query().Get("search")
-	limitParameter := r.URL.Query().Get("limit")
-
-	tasks, err := sh.service.GetTasks(r.Context(), limitParameter, strings.TrimSpace(searchParameter))
-	if err != nil {
-		JsonError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	WriteJson(w, TasksResp{
-		Tasks: tasks,
-	}, http.StatusOK)
-
 }
 
 func (sh *SchedulerHandler) completeTaskHandler(w http.ResponseWriter, r *http.Request) {

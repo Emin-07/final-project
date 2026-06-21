@@ -2,8 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 )
+
+var noIdProvidedErr = errors.New("Не указан идентификатор")
 
 func WriteJson(w http.ResponseWriter, v any, status int) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")

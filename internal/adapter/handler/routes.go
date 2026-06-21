@@ -11,14 +11,12 @@ func (sh *SchedulerHandler) RegisterRoutes(router *chi.Mux, passwordForAuth stri
 	router.Handle("/*", http.FileServer(http.Dir("./web")))
 	router.Get("/api/nextdate", sh.getNextDate)
 
-	router.Post("/api/task", Auth(sh.addTaskHandler, passwordForAuth))
-	router.Get("/api/task", Auth(sh.taskHandler, passwordForAuth))
-	router.Put("/api/task", Auth(sh.changeTaskHandler, passwordForAuth))
-	router.Delete("/api/task", Auth(sh.deleteTaskHandler, passwordForAuth))
-
+	router.Post("/api/tasks", Auth(sh.addTaskHandler, passwordForAuth))
 	router.Get("/api/tasks", Auth(sh.tasksHandler, passwordForAuth))
+	router.Put("/api/tasks", Auth(sh.changeTaskHandler, passwordForAuth))
+	router.Delete("/api/tasks", Auth(sh.deleteTaskHandler, passwordForAuth))
 
-	router.Post("/api/task/done", Auth(sh.completeTaskHandler, passwordForAuth))
+	router.Post("/api/tasks/done", Auth(sh.completeTaskHandler, passwordForAuth))
 
 	router.Post("/api/signin", sh.signInHandler)
 
